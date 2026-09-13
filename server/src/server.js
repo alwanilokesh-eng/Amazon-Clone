@@ -33,6 +33,23 @@ app.use('/api/upload', uploadRoutes);
 
 app.use('/uploads', express.static(path.join(rootDir, 'uploads')));
 
+if (process.env.NODE_ENV === 'production') {
+  // Single-service deployment: serve the built client (client/dist) and let
+  // React Router handle client-side routes. Skipped for split deployments
+  // (e.g. frontend on Vercel) where client/dist won't exist on the API host.
+  const clientDist = path.join(rootDir, '..', 'client', 'dist');
+  app.use(express.static(clientDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+      if (err) next();
+    });
+  });
+}
+
 app.use(notFound);
 app.use(errorHandler);
 
